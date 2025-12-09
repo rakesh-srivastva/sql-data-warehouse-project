@@ -1,2 +1,3 @@
-# mssql-datawarehouse-learning
-Practice repo for SQL Server Data Warehouse scripts and diagrams.
+# Data Warehouse and Analytics project
+Welcome to the **Data warehouse and Analytics project** repository!
+This project demonstrates a comprehensive data warehousing and analytics solution, from building a data warehouse to generating actionable insights. Designed as a portfolio project that highlights industry best practices in data engineering and analytics.
