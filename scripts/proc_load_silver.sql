@@ -66,7 +66,6 @@ BEGIN
 				*,
 				ROW_NUMBER() OVER (PARTITION BY cst_id ORDER BY cst_create_date DESC) AS flag_last
 			FROM bronze.crm_cust_info
-			WHERE cst_id IS NOT NULL
 		) t
 		WHERE flag_last = 1; -- Select the most recent record per customer
 		SET @end_time = GETDATE();
@@ -101,11 +100,17 @@ BEGIN
 				WHEN UPPER(TRIM(prd_line)) = 'T' THEN 'Touring'
 				ELSE 'n/a'
 			END AS prd_line, -- Map product line codes to descriptive values
-			CAST(prd_start_dt AS DATE) AS prd_start_dt,
-			CAST(
-				CAST(DATEADD(DAY, -1,LEAD(prd_start_dt) OVER (PARTITION BY prd_key ORDER BY prd_start_dt) ) 
-				AS DATE
-			) AS prd_end_dt -- Calculate end date as one day before the next start date
+			prd_start_dt,
+			CASE 
+				-- If LEAD exists, use one day before it
+				WHEN LEAD(prd_start_dt) OVER (PARTITION BY prd_key ORDER BY prd_start_dt) IS NOT NULL 
+						THEN DATEADD(DAY, -1, LEAD(prd_start_dt) OVER (PARTITION BY prd_key ORDER BY prd_start_dt))
+				-- Otherwise, use existing prd_end_dt only if it's valid
+				WHEN prd_end_dt IS NOT NULL AND prd_end_dt > prd_start_dt 
+						THEN prd_end_dt
+				-- Else set to NULL
+				ELSE NULL
+			END AS prd_end_dt
 		FROM bronze.crm_prd_info;
         SET @end_time = GETDATE();
         PRINT '>> Load Duration: ' + CAST(DATEDIFF(SECOND, @start_time, @end_time) AS NVARCHAR) + ' seconds';
@@ -144,8 +149,10 @@ BEGIN
 				ELSE CAST(CAST(sls_due_dt AS VARCHAR) AS DATE)
 			END AS sls_due_dt,
 			CASE 
-				WHEN sls_sales IS NULL OR sls_sales <= 0 OR sls_sales != sls_quantity * ABS(sls_price) 
+				WHEN (sls_sales IS NULL OR sls_sales <= 0) AND sls_price <> 0 
 					THEN sls_quantity * ABS(sls_price)
+				WHEN sls_sales != sls_quantity * ABS(sls_price) AND (sls_price IS NULL or sls_price = 0)
+					THEN sls_sales
 				ELSE sls_sales
 			END AS sls_sales, -- Recalculate sales if original value is missing or incorrect
 			sls_quantity,
