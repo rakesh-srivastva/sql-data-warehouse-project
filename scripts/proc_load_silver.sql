@@ -60,7 +60,7 @@ BEGIN
 				WHEN UPPER(TRIM(cst_gndr)) = 'M' THEN 'Male'
 				ELSE 'n/a'
 			END AS cst_gndr, -- Normalize gender values to readable format
-			cst_create_date
+			cst_create_date AS cst_create_date
 		FROM (
 			SELECT
 				*,
