@@ -1,1 +1,1 @@
-Select getdate();
+Select getdate() + 1;
